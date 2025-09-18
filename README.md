@@ -13,7 +13,7 @@ It contains the full repository of Team Vai-Vai Electronics to compete in World 
 
 ## Content
 
-- `t-photos`: Contains 2 photos of the team, including an official one and a funny photo with all team members.
+- `t-photos`: Contains photo of the team with all team members.
 - `v-photos`: Contains 6 photos of the vehicle, showcasing it from every side as well as from the top and bottom.
 - `video`: Contains a `video.md` file with a link to a video demonstrating the vehicle's driving capabilities.
 - `schemes`: Contains one or several schematic diagrams (JPEG, PNG, or PDF) illustrating all electromechanical components used in the vehicle, including electronic components and motors, and how they connect to each other.
