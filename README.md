@@ -20,3 +20,12 @@ It contains the full repository of Team Vai-Vai Electronics to compete in World 
 - `src`: Contains the control software code for all components programmed to participate in the competition.
 - `models` (optional): Contains files for models used by 3D printers, laser cutting machines, and CNC machines to produce the vehicle elements. If not needed, this directory can be removed.
 - `other` (optional): Contains additional files that can help understand how to prepare the vehicle for the competition, such as documentation on connecting to a SBC/SBM, uploading files, datasets, hardware specifications, and communication protocols descriptions. If not needed, this directory can be removed.
+
+OUR ROBOT
+====
+## OUR ROBOT
+<p align="center">
+![picwish_8823215301_image2](https://github.com/user-attachments/assets/67b28c85-cd1c-437c-a389-c03ff844aca6)
+<br>
+  <strong>OUR ROBOT</strong>
+</p>
