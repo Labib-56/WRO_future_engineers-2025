@@ -70,7 +70,7 @@ Using a rear-wheel drive system the bot will be able to perform the follow (the 
 
 ### ELABORATION OF PRACTICAL FUNCTIONS DETAILS
 **Frame:**  
-We have used handmade steering(with spare parts from remote controlled toy car) and gear box with the modified chassis. 
+We have used handmade steering (with spare parts from remote controlled toy car) and gear box with the modified chassis. 
 <p align="center">
 <img width="601" height="646" alt="st" src="https://github.com/user-attachments/assets/a45f55f0-ba11-4280-9f12-1a408c483d9f" />
 <img width="862" height="647" alt="gear" src="https://github.com/user-attachments/assets/ef7268de-8bd6-414d-ae3c-ee938e6310fe" />
