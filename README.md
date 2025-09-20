@@ -92,8 +92,8 @@ The robot uses a power bank that has an output of 5V/2.5A or less.
 | 1        | Raspberry Pi Camera Module V1.3    | <img width="701" height="686" alt="picam (1)" src="https://github.com/user-attachments/assets/4f09dcce-4395-4877-919d-f3444324d50a" />                  |
 | 1        | 5V power bank                      | ![5v power bank](https://github.com/DexterTaha/WRO-2024-FUTURE-ENGINEERS/assets/130682580/4259c9a3-a346-4806-9d60-ad36e5115942)                         |
 | 3        | 18650 Lithium-ion battery (with casing)         |<img width="634" height="577" alt="battery (2)" src="https://github.com/user-attachments/assets/4261f1c6-33a5-4fd2-aac2-f326e78b0566"  />   |
-| 3        | Ultrasonic Sonar Sensor HC-SR04    |      <img width="702" height="702" alt="sonar (1)" src="https://github.com/user-attachments/assets/2435b370-180a-41d3-a2de-4b57223c832e" />             |
-| 5        | High Torque Gear Motor 12V 300RPM  | <img width="702" height="703" alt="motor (1)" src="https://github.com/user-attachments/assets/4f9ad0bd-93da-43d9-ab16-166273b93a6a" />                  |
+| 6        | Ultrasonic Sonar Sensor HC-SR04    |      <img width="702" height="702" alt="sonar (1)" src="https://github.com/user-attachments/assets/2435b370-180a-41d3-a2de-4b57223c832e" />             |
+| 1        | High Torque Gear Motor 12V 300RPM  | <img width="702" height="703" alt="motor (1)" src="https://github.com/user-attachments/assets/4f9ad0bd-93da-43d9-ab16-166273b93a6a" />                  |
 | 2        | L298N Motor Driver                 |   <img width="634" height="577" alt="driver (1)" src="https://github.com/user-attachments/assets/d7f3ebab-f937-4992-8749-feecf9789d80" />               |
 | 3        | MG996R Servo Motor                 |    <img width="937" height="701" alt="servo (1)" src="https://github.com/user-attachments/assets/9a1a193a-4572-4500-813d-b1486879f261" />               |
 | 4        | Wheel                              |  <img width="806" height="703" alt="wheel (1)" src="https://github.com/user-attachments/assets/c736eb16-e9f8-48ec-a8c5-5042ca222978" />                 |
