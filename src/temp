@@ -1,1 +1,248 @@
+import RPi.GPIO as GPIO
+import time
+from enum import Enum
 
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
+
+SERVO_PIN = 13
+SERVO_CENTER = 93
+SERVO_LEFT = 60
+SERVO_RIGHT = 120
+SERVO_SLIGHT_LEFT = 63
+SERVO_SLIGHT_RIGHT = 117
+
+MOTOR_IN3 = 5
+MOTOR_IN4 = 6
+MOTOR_ENB = 12
+
+FRONT_TRIG = 16
+FRONT_ECHO = 27
+LEFT_TRIG = 22
+LEFT_ECHO = 23
+RIGHT_TRIG = 24
+RIGHT_ECHO = 25
+
+BUTTON_PIN = 2
+
+CRUISE_SPEED = 50
+SLOW_SPEED = 30
+
+STOP_DISTANCE = 53
+SIDE_OBSTACLE_DISTANCE = 17
+TURN_DURATION = 1.1
+AVOIDANCE_DURATION = 0.44
+
+class State(Enum):
+    WAITING_FOR_BUTTON = 1
+    MOVING_FORWARD = 2
+    STOPPED = 3
+    MEASURING = 4
+    TURNING = 5
+    COMPLETED_TURN = 6
+    AVOIDING_LEFT = 7
+    AVOIDING_RIGHT = 8
+current_state = State.WAITING_FOR_BUTTON
+button_pressed = False
+turn_direction = 0
+turn_start_time = 0
+avoid_start_time = 0
+steering_adjust_start_time = 0
+current_steering_angle = SERVO_CENTER
+
+servo_pwm = None
+motor_pwm = None
+
+def setup_gpio():
+    global servo_pwm, motor_pwm
+    
+    for trig, echo in [(FRONT_TRIG, FRONT_ECHO), (LEFT_TRIG, LEFT_ECHO), (RIGHT_TRIG, RIGHT_ECHO)]:
+        GPIO.setup(trig, GPIO.OUT)
+        GPIO.setup(echo, GPIO.IN)
+        GPIO.output(trig, False)
+    
+    GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    
+    GPIO.setup(SERVO_PIN, GPIO.OUT)
+    
+    GPIO.setup(MOTOR_IN3, GPIO.OUT)
+    GPIO.setup(MOTOR_IN4, GPIO.OUT)
+    GPIO.setup(MOTOR_ENB, GPIO.OUT)
+    
+    servo_pwm = GPIO.PWM(SERVO_PIN, 50)
+    motor_pwm = GPIO.PWM(MOTOR_ENB, 1000)
+    
+    servo_pwm.start(0)
+    motor_pwm.start(0)
+    
+    stop_motor()
+    
+    print("Robot Ready - Press button to start")
+
+def get_distance(trig_pin, echo_pin):
+    GPIO.output(trig_pin, False)
+    time.sleep(0.000002)
+    GPIO.output(trig_pin, True)
+    time.sleep(0.00001)
+    GPIO.output(trig_pin, False)
+    
+    timeout = time.time() + 0.04
+    
+    pulse_start = time.time()
+    while GPIO.input(echo_pin) == 0 and time.time() < timeout:
+        pulse_start = time.time()
+    
+    pulse_end = time.time()
+    while GPIO.input(echo_pin) == 1 and time.time() < timeout:
+        pulse_end = time.time()
+    
+    try:
+        pulse_duration = pulse_end - pulse_start
+        distance = pulse_duration * 17150
+        distance = round(distance, 2)
+        
+        if distance <= 0 or distance > 300:
+            return 999
+        return distance
+    except:
+        return 999
+def move_forward(speed):
+    GPIO.output(MOTOR_IN3, GPIO.HIGH)
+    GPIO.output(MOTOR_IN4, GPIO.LOW)
+    motor_pwm.ChangeDutyCycle(speed)
+
+def stop_motor():
+    GPIO.output(MOTOR_IN3, GPIO.LOW)
+    GPIO.output(MOTOR_IN4, GPIO.LOW)
+    motor_pwm.ChangeDutyCycle(0)
+
+def set_steering(angle):
+    global current_steering_angle
+    angle = max(SERVO_LEFT, min(SERVO_RIGHT, angle))
+    duty_cycle = 2.5 + (angle / 180.0) * 10
+    servo_pwm.ChangeDutyCycle(duty_cycle)
+    current_steering_angle = angle
+
+try:
+    setup_gpio()
+    set_steering(SERVO_CENTER)
+    
+    while True:
+        front_dist = get_distance(FRONT_TRIG, FRONT_ECHO)
+        left_dist = get_distance(LEFT_TRIG, LEFT_ECHO)
+        right_dist = get_distance(RIGHT_TRIG, RIGHT_ECHO)
+        
+        if current_state == State.MOVING_FORWARD:
+            if front_dist > STOP_DISTANCE:
+                current_time = time.time()
+                if current_time - steering_adjust_start_time >= 1.0:
+                    steering_adjust_start_time = current_time
+                    if current_steering_angle < SERVO_RIGHT:
+                        current_steering_angle += 1
+                        set_steering(current_steering_angle)
+                        print("Increasing steering to:", current_steering_angle)
+            elif front_dist <= STOP_DISTANCE:
+                if current_steering_angle != SERVO_CENTER:
+                    current_steering_angle = SERVO_CENTER
+                    set_steering(SERVO_CENTER)
+                    steering_adjust_start_time = time.time()
+                    print("Reset steering to center (93 degrees)")
+        if current_state == State.MOVING_FORWARD:
+            if left_dist < SIDE_OBSTACLE_DISTANCE and left_dist > 0:
+                current_state = State.AVOIDING_RIGHT
+                avoid_start_time = time.time()
+                set_steering(SERVO_SLIGHT_RIGHT)
+                print("Left obstacle detected - turning slightly right")
+            elif right_dist < SIDE_OBSTACLE_DISTANCE and right_dist > 0:
+                current_state = State.AVOIDING_LEFT
+                avoid_start_time = time.time()
+                set_steering(SERVO_SLIGHT_LEFT)
+                print("Right obstacle detected - turning slightly left")
+        
+        if current_state == State.WAITING_FOR_BUTTON:
+            set_steering(SERVO_CENTER)
+            current_steering_angle = SERVO_CENTER
+            steering_adjust_start_time = time.time()
+            
+            if GPIO.input(BUTTON_PIN) == GPIO.LOW and not button_pressed:
+                button_pressed = True
+                current_state = State.MOVING_FORWARD
+                move_forward(CRUISE_SPEED)
+                steering_adjust_start_time = time.time()
+                print("Moving Forward")
+                time.sleep(0.3)
+        
+        elif current_state == State.MOVING_FORWARD:
+            if front_dist <= STOP_DISTANCE and front_dist > 0:
+                stop_motor()
+                current_state = State.STOPPED
+                print("Stopped at front obstacle")
+        
+        elif current_state == State.STOPPED:
+            time.sleep(0.3)
+            current_state = State.MEASURING
+        
+        elif current_state == State.MEASURING:
+            print("Left:", left_dist, "cm, Right:", right_dist, "cm")
+            
+            if left_dist > right_dist + 5:
+                turn_direction = 1
+                print("Turning LEFT (more space)")
+            else:
+                turn_direction = 2
+                print("Turning RIGHT (more space)")
+            
+            current_state = State.TURNING
+            turn_start_time = time.time()
+            
+            if turn_direction == 1:
+                set_steering(SERVO_LEFT)
+            else:
+                set_steering(SERVO_RIGHT)
+            
+            move_forward(CRUISE_SPEED)
+        
+        elif current_state == State.TURNING:
+            if time.time() - turn_start_time > TURN_DURATION:
+                stop_motor()
+                set_steering(SERVO_CENTER)
+                current_steering_angle = SERVO_CENTER
+                current_state = State.COMPLETED_TURN
+                print("Turn completed")
+        
+        elif current_state == State.COMPLETED_TURN:
+            time.sleep(0.3)
+            current_state = State.MOVING_FORWARD
+            move_forward(CRUISE_SPEED)
+            steering_adjust_start_time = time.time()
+            print("Moving Forward")
+        
+        elif current_state == State.AVOIDING_LEFT:
+            if time.time() - avoid_start_time > AVOIDANCE_DURATION:
+                set_steering(SERVO_CENTER)
+                current_steering_angle = SERVO_CENTER
+                current_state = State.MOVING_FORWARD
+                steering_adjust_start_time = time.time()
+                print("Avoidance completed - returning to center")
+        
+        elif current_state == State.AVOIDING_RIGHT:
+            if time.time() - avoid_start_time > AVOIDANCE_DURATION:
+                set_steering(SERVO_CENTER)
+                current_steering_angle = SERVO_CENTER
+                current_state = State.MOVING_FORWARD
+                steering_adjust_start_time = time.time()
+                print("Avoidance completed - returning to center")
+        
+        time.sleep(0.05)
+
+except KeyboardInterrupt:
+    print("Program stopped by user")
+
+finally:
+    if servo_pwm is not None:
+        servo_pwm.stop()
+    if motor_pwm is not None:
+        motor_pwm.stop()
+    GPIO.cleanup()
+    print("GPIO cleaned up")
+    
