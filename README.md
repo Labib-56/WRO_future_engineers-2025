@@ -96,6 +96,7 @@ The robot uses a power bank that has an output of 5V/2.5A or less.
 | Quantity | Status                             | Description                                                                                                                                             |
 | ---------| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------|
 | 1        | Raspberry Pi 4 Model B             | ![Raspberry-Pi4](https://github.com/DexterTaha/WRO-2024-FUTURE-ENGINEERS/assets/130682580/29ab19c0-aab2-42f6-a3a3-ed79587e58bc)                         |
+| 1        | ESP32                              |        <img width="998" height="712" alt="SBC-NODEMCU-ESP32-01" src="https://github.com/user-attachments/assets/a62e7e0d-07ea-4646-80a1-78c9fab584f9" />  |
 | 1        | Raspberry Pi Camera Module V1.3    | <img width="701" height="686" alt="picam (1)" src="https://github.com/user-attachments/assets/4f09dcce-4395-4877-919d-f3444324d50a" />                  |
 | 1        | 5V power bank                      | ![5v power bank](https://github.com/DexterTaha/WRO-2024-FUTURE-ENGINEERS/assets/130682580/4259c9a3-a346-4806-9d60-ad36e5115942)                         |
 | 3        | 18650 Lithium-ion battery (with casing)         |<img width="634" height="577" alt="battery (2)" src="https://github.com/user-attachments/assets/4261f1c6-33a5-4fd2-aac2-f326e78b0566"  />   |
