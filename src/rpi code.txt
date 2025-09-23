@@ -1,0 +1,197 @@
+#!/usr/bin/env python3
+
+from picamera2 import Picamera2
+import cv2
+import numpy as np
+import serial
+import time
+import os
+
+# HSV range for black color
+BLACK_LOWER = np.array([0, 0, 0])
+BLACK_UPPER = np.array([179, 255, 65])
+
+# Lap counting variables
+lap_count = 0.0
+line_present = False
+line_detected = False
+mission_complete = False
+
+def detect_black_line(frame):
+    """Detect black lines in the frame and return if a significant line is present"""
+    global line_present, line_detected
+    
+    # Convert to HSV
+    hsv = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
+    
+    # Create mask for black color
+    mask = cv2.inRange(hsv, BLACK_LOWER, BLACK_UPPER)
+    
+    # Find contours
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    line_detected = False
+    
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if area > 500:  # Minimum area threshold to avoid noise
+            x, y, w, h = cv2.boundingRect(contour)
+            aspect_ratio = w / h
+            
+            # Check if it's a horizontal line (width > height)
+            if aspect_ratio > 2.0 and w > 100:
+                line_detected = True
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                break
+    
+    # Lap counting logic
+    if line_detected and not line_present:
+        line_present = True
+        return True  # Line just appeared
+    
+    elif not line_detected and line_present:
+        line_present = False
+        return False  # Line just disappeared
+    
+    return None  # No change
+
+def find_esp32_usb_port():
+    """Try to find the ESP32 USB serial port"""
+    possible_ports = ['/dev/ttyUSB0', '/dev/ttyUSB1', '/dev/ttyACM0', '/dev/ttyACM1']
+    
+    for port in possible_ports:
+        if os.path.exists(port):
+            try:
+                # Try to open the port to verify it's working
+                test_ser = serial.Serial(port, 115200, timeout=1)
+                test_ser.close()
+                print(f"Found ESP32 on {port}")
+                return port
+            except:
+                continue
+    
+    print("ESP32 not found on any common USB ports")
+    return None
+
+def main():
+    global lap_count, mission_complete
+    
+    # Find and initialize USB serial connection with ESP32
+    usb_port = find_esp32_usb_port()
+    ser = None
+    
+    if usb_port:
+        try:
+            ser = serial.Serial(
+                port=usb_port,
+                baudrate=115200,
+                parity=serial.PARITY_NONE,
+                stopbits=serial.STOPBITS_ONE,
+                bytesize=serial.EIGHTBITS,
+                timeout=1
+            )
+            time.sleep(2)  # Wait for connection to establish
+            print(f"USB serial connection established with ESP32 on {usb_port}")
+        except Exception as e:
+            print(f"USB serial connection failed: {e}")
+            ser = None
+    else:
+        print("Could not find ESP32 USB port")
+        print("Please check USB connection and try again")
+        ser = None
+    
+    # Initialize camera
+    try:
+        picam2 = Picamera2()
+        config = picam2.create_preview_configuration(
+            main={"size": (640, 480), "format": "RGB888"}
+        )
+        picam2.configure(config)
+        picam2.start()
+        time.sleep(2)  # Allow camera to warm up
+        print("Camera started successfully")
+    except Exception as e:
+        print(f"Camera initialization failed: {e}")
+        return
+    
+    print("Black Line Detector Started")
+    print("Lap counting active - Robot will stop automatically after 3 laps")
+    print("Press 'q' to quit")
+    
+    try:
+        while not mission_complete:
+            # Capture frame from camera
+            frame = picam2.capture_array()
+            
+            # Mirror the frame horizontally
+            frame = cv2.flip(frame, 1)
+            
+            # Detect black line
+            line_event = detect_black_line(frame)
+            
+            # Update lap count when line disappears
+            if line_event is False:
+                lap_count += 0.25
+                print(f"Lap count: {lap_count}")
+                
+                # Send lap count to ESP32 via USB
+                if ser and ser.is_open:
+                    try:
+                        ser.write(f"LAP:{lap_count}\n".encode('utf-8'))
+                        print(f"Sent to ESP32: LAP:{lap_count}")
+                    except Exception as e:
+                        print(f"Error sending to ESP32: {e}")
+                
+                # Check if mission complete
+                if lap_count >= 3.0:
+                    mission_complete = True
+                    print("Mission Complete! Lap count reached 3.0")
+                    if ser and ser.is_open:
+                        ser.write("LAP:3.0\n".encode('utf-8'))
+                    break
+            
+            # Display frame with lap count
+            cv2.putText(frame, f"Laps: {lap_count}", (10, 30), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+            
+            status = "MISSION COMPLETE" if mission_complete else "COUNTING LAPS"
+            cv2.putText(frame, f"Status: {status}", (10, 70), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+            
+            if line_detected:
+                cv2.putText(frame, "LINE DETECTED", (10, 110), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            
+            cv2.imshow('Black Line Detection', frame)
+            
+            # Exit on 'q' press
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+            
+            time.sleep(0.1)
+        
+        # Mission complete - wait a bit then close
+        print("Mission complete. Waiting 2 seconds before shutting down...")
+        time.sleep(2)
+            
+    except KeyboardInterrupt:
+        print("Stopping...")
+    
+    except Exception as e:
+        print(f"Error during execution: {e}")
+    
+    finally:
+        # Cleanup
+        cv2.destroyAllWindows()
+        try:
+            picam2.stop()
+            picam2.close()
+        except:
+            pass
+        if ser and ser.is_open:
+            ser.close()
+        print("Program ended")
+
+if __name__ == "__main__":
+    main()
+
