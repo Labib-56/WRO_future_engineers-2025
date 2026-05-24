@@ -1,0 +1,111 @@
+#include <Arduino.h>
+
+// Sonar Sensor Pins
+#define SONAR1_TRIG 32    // Front
+#define SONAR1_ECHO 33
+#define SONAR2_TRIG 25    // Left Front
+#define SONAR2_ECHO 26
+#define SONAR3_TRIG 5     // Right Front
+#define SONAR3_ECHO 19
+#define SONAR4_TRIG 12    // Left Side
+#define SONAR4_ECHO 15
+#define SONAR5_TRIG 2     // Right Side
+#define SONAR5_ECHO 4
+#define SONAR6_TRIG 27    // Rear
+#define SONAR6_ECHO 14
+
+// Sonar positions for display
+const char* sonarPositions[6] = {
+  "Front", "Left Front", "Right Front", "Left Side", "Right Side", "Rear"
+};
+
+void setup() {
+  Serial.begin(115200);
+  
+  // Setup all sonar pins
+  int sonarPins[6][2] = {
+    {SONAR1_TRIG, SONAR1_ECHO},
+    {SONAR2_TRIG, SONAR2_ECHO},
+    {SONAR3_TRIG, SONAR3_ECHO},
+    {SONAR4_TRIG, SONAR4_ECHO},
+    {SONAR5_TRIG, SONAR5_ECHO},
+    {SONAR6_TRIG, SONAR6_ECHO}
+  };
+  
+  for (int i = 0; i < 6; i++) {
+    pinMode(sonarPins[i][0], OUTPUT);
+    pinMode(sonarPins[i][1], INPUT);
+    digitalWrite(sonarPins[i][0], LOW); // Ensure trigger starts low
+  }
+  
+  Serial.println("ESP32 Sonar Sensor Test");
+  Serial.println("=======================");
+  delay(1000);
+}
+
+float getDistance(int trigPin, int echoPin) {
+  // Send 10us trigger pulse
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  
+  // Read echo pulse duration
+  long duration = pulseIn(echoPin, HIGH, 30000); // 30ms timeout
+  
+  if (duration == 0) {
+    return -1.0; // Timeout or no echo
+  }
+  
+  // Calculate distance in cm
+  float distance = duration * 0.034 / 2;
+  
+  // Filter out invalid readings
+  if (distance < 2 || distance > 400) {
+    return -1.0;
+  }
+  
+  return distance;
+}
+
+void loop() {
+  Serial.println("\n--- Reading All Sonar Sensors ---");
+  
+  // Array to store distances
+  float distances[6];
+  
+  // Read all sensors
+  int sonarPins[6][2] = {
+    {SONAR1_TRIG, SONAR1_ECHO},
+    {SONAR2_TRIG, SONAR2_ECHO},
+    {SONAR3_TRIG, SONAR3_ECHO},
+    {SONAR4_TRIG, SONAR4_ECHO},
+    {SONAR5_TRIG, SONAR5_ECHO},
+    {SONAR6_TRIG, SONAR6_ECHO}
+  };
+  
+  for (int i = 0; i < 6; i++) {
+    distances[i] = getDistance(sonarPins[i][0], sonarPins[i][1]);
+    delay(50); // Short delay between sensors
+  }
+  
+  // Display results
+  for (int i = 0; i < 6; i++) {
+    Serial.print("Sonar ");
+    Serial.print(i + 1);
+    Serial.print(" (");
+    Serial.print(sonarPositions[i]);
+    Serial.print("): ");
+    
+    if (distances[i] < 0) {
+      Serial.println("No signal/Out of range");
+    } else {
+      Serial.print(distances[i]);
+      Serial.println(" cm");
+    }
+  }
+  
+  Serial.println("=======================");
+  delay(1000); // Wait 1 second between readings
+}
