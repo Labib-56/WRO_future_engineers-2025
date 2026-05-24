@@ -10,6 +10,7 @@ One of the most dynamic categories within WRO is the Future Engineers category. 
 This year, the Future Engineers category presents an exciting challenge: creating a self-driving car. This challenge pushes participants to explore the cutting edge of robotics, adding layers of complexity and innovation to an already thrilling competition.
 
 It contains the full repository of Team Vai-Vai Electronics to compete in World Robot Olympiad 2025 (Category: Future Engineers).
+Website for full details: https://wro-association.org/competition/categories/
 
 ## Content
 
